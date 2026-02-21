@@ -81,6 +81,8 @@ Each remote job contains source URL, target relative path, and `favorite=true` s
 
 ## NAS notes
 If using `local` mode, set `SAVE_THAT_TUNE_NAS_ROOT` to your mounted Synology music folder.
+## NAS notes
+Set `SAVE_THAT_TUNE_NAS_ROOT` to your mounted Synology music folder.
 Examples:
 - Mac mount: `/Volumes/music/inbox`
 - Synology local path in container: `/volume1/music/inbox`

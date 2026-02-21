@@ -8,6 +8,7 @@ from app.db import Database
 from app.services.crossref import load_crossref_for_artist
 from app.services.notifier import send_email
 from app.services.saver import download_from_youtube, download_to_nas, queue_remote_synology_job
+from app.services.saver import download_from_youtube, download_to_nas
 from app.services.sources import LMAClient, PhishInClient, SpotifyClient
 
 
@@ -140,6 +141,8 @@ def process_capture(db: Database, settings: Settings, request_id: int, artist: s
             else:
                 final_path = download_to_nas(dl, settings.nas_music_root, rel)
                 save_message = f"Downloaded {best.source} file to {final_path}."
+            final_path = download_to_nas(dl, settings.nas_music_root, rel)
+            save_message = f"Downloaded {best.source} file to {final_path}."
         else:
             save_message = f"Matched {best.source} but no downloadable URL was found."
 
