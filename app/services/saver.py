@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+import shutil
+import subprocess
+from datetime import datetime, timezone
 import shutil
 import subprocess
 from pathlib import Path
@@ -55,3 +59,38 @@ def download_from_youtube(query: str, nas_root: Path, relative_path: str) -> Pat
         return None
     mark_favorite(final)
     return final
+
+
+def queue_remote_synology_job(
+    request_id: int,
+    source: str,
+    source_url: str,
+    relative_path: str,
+    queue_dir: Path,
+    webhook_url: str | None = None,
+    webhook_token: str | None = None,
+) -> dict:
+    queue_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "request_id": request_id,
+        "source": source,
+        "source_url": source_url,
+        "relative_path": relative_path,
+        "favorite": True,
+        "queued_at": datetime.now(timezone.utc).isoformat(),
+    }
+    queue_file = queue_dir / f"job_{request_id}_{source.replace('.', '_')}.json"
+    queue_file.write_text(json.dumps(payload, indent=2))
+
+    webhook_status = None
+    if webhook_url:
+        headers = {"Content-Type": "application/json"}
+        if webhook_token:
+            headers["Authorization"] = f"Bearer {webhook_token}"
+        try:
+            resp = requests.post(webhook_url, json=payload, headers=headers, timeout=20)
+            webhook_status = resp.status_code
+        except requests.RequestException:
+            webhook_status = "error"
+
+    return {"queue_file": str(queue_file), "webhook_status": webhook_status}

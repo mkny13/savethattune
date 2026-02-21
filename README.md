@@ -66,6 +66,21 @@ curl -X POST http://localhost:8000/capture \
   - Grateful Dead/others use DeadDisc (`https://www.deaddisc.com/GDFD_Dead_By_Date.htm`)
   - Phish uses phish.net LivePhish charts (`https://phish.net/charts/livephish`)
 
+## Synology without mounting (recommended for your setup)
+If your Synology is **not mounted** on the Mac, use remote dispatch mode:
+
+- `SAVE_THAT_TUNE_SYNOLOGY_MODE=queue`:
+  - app writes job JSON files to `SAVE_THAT_TUNE_SYNOLOGY_QUEUE_DIR`
+  - a scheduled Synology task can pull/process these jobs daily.
+- `SAVE_THAT_TUNE_SYNOLOGY_MODE=webhook`:
+  - same queue file, plus HTTP POST to your Synology webhook endpoint for near-real-time pickup.
+- `SAVE_THAT_TUNE_SYNOLOGY_MODE=local` (default):
+  - direct local filesystem writes (requires mounted NAS path).
+
+Each remote job contains source URL, target relative path, and `favorite=true` so your NAS-side worker can download/tag in batch.
+
+## NAS notes
+If using `local` mode, set `SAVE_THAT_TUNE_NAS_ROOT` to your mounted Synology music folder.
 ## NAS notes
 Set `SAVE_THAT_TUNE_NAS_ROOT` to your mounted Synology music folder.
 Examples:
