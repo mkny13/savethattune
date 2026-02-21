@@ -67,22 +67,31 @@ curl -X POST http://localhost:8000/capture \
   - Phish uses phish.net LivePhish charts (`https://phish.net/charts/livephish`)
 
 ## Synology without mounting (recommended for your setup)
-If your Synology is **not mounted** on the Mac, use remote dispatch mode:
+If your Synology is **not mounted** and you do **not** want inbound NAS exposure, use an outbound/shared-file workflow:
 
+- `SAVE_THAT_TUNE_SYNOLOGY_MODE=manifest` (recommended):
+  - app appends jobs to one NDJSON file (`SAVE_THAT_TUNE_SYNOLOGY_MANIFEST_FILE`)
+  - place that file in a Google Drive-synced folder (or other cloud sync target)
+  - Synology Cloud Sync pulls that file, and a daily scheduled task processes new rows.
 - `SAVE_THAT_TUNE_SYNOLOGY_MODE=queue`:
-  - app writes job JSON files to `SAVE_THAT_TUNE_SYNOLOGY_QUEUE_DIR`
-  - a scheduled Synology task can pull/process these jobs daily.
-- `SAVE_THAT_TUNE_SYNOLOGY_MODE=webhook`:
-  - same queue file, plus HTTP POST to your Synology webhook endpoint for near-real-time pickup.
-- `SAVE_THAT_TUNE_SYNOLOGY_MODE=local` (default):
+  - app writes one JSON file per job in `SAVE_THAT_TUNE_SYNOLOGY_QUEUE_DIR`
+  - sync that folder to Synology and scan daily.
+- `SAVE_THAT_TUNE_SYNOLOGY_MODE=local`:
   - direct local filesystem writes (requires mounted NAS path).
 
-Each remote job contains source URL, target relative path, and `favorite=true` so your NAS-side worker can download/tag in batch.
+Each remote job includes source URL, target relative path, and `favorite=true` so your NAS-side worker can download/tag in batch.
+
+### Synology daily batch worker
+Use `scripts/synology_batch_worker.py` as a scheduled task on Synology:
+
+```bash
+python3 scripts/synology_batch_worker.py   --manifest /volume1/cloudsync/savethattune/synology_manifest.ndjson   --done /volume1/cloudsync/savethattune/processed_ids.txt   --nas-root /volume1/music/inbox
+```
+
+This lets Synology initiate all network downloads itself (no inbound connectivity needed).
 
 ## NAS notes
 If using `local` mode, set `SAVE_THAT_TUNE_NAS_ROOT` to your mounted Synology music folder.
-## NAS notes
-Set `SAVE_THAT_TUNE_NAS_ROOT` to your mounted Synology music folder.
 Examples:
 - Mac mount: `/Volumes/music/inbox`
 - Synology local path in container: `/volume1/music/inbox`

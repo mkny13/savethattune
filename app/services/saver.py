@@ -4,8 +4,6 @@ import json
 import shutil
 import subprocess
 from datetime import datetime, timezone
-import shutil
-import subprocess
 from pathlib import Path
 
 import requests
@@ -61,16 +59,7 @@ def download_from_youtube(query: str, nas_root: Path, relative_path: str) -> Pat
     return final
 
 
-def queue_remote_synology_job(
-    request_id: int,
-    source: str,
-    source_url: str,
-    relative_path: str,
-    queue_dir: Path,
-    webhook_url: str | None = None,
-    webhook_token: str | None = None,
-) -> dict:
-    queue_dir.mkdir(parents=True, exist_ok=True)
+def _job_payload(request_id: int, source: str, source_url: str, relative_path: str, youtube_query: str | None = None) -> dict:
     payload = {
         "request_id": request_id,
         "source": source,
@@ -79,18 +68,36 @@ def queue_remote_synology_job(
         "favorite": True,
         "queued_at": datetime.now(timezone.utc).isoformat(),
     }
+    if youtube_query:
+        payload["youtube_query"] = youtube_query
+    return payload
+
+
+def queue_remote_synology_job(
+    request_id: int,
+    source: str,
+    source_url: str,
+    relative_path: str,
+    queue_dir: Path,
+    youtube_query: str | None = None,
+) -> dict:
+    queue_dir.mkdir(parents=True, exist_ok=True)
+    payload = _job_payload(request_id, source, source_url, relative_path, youtube_query)
     queue_file = queue_dir / f"job_{request_id}_{source.replace('.', '_')}.json"
     queue_file.write_text(json.dumps(payload, indent=2))
+    return {"queue_file": str(queue_file)}
 
-    webhook_status = None
-    if webhook_url:
-        headers = {"Content-Type": "application/json"}
-        if webhook_token:
-            headers["Authorization"] = f"Bearer {webhook_token}"
-        try:
-            resp = requests.post(webhook_url, json=payload, headers=headers, timeout=20)
-            webhook_status = resp.status_code
-        except requests.RequestException:
-            webhook_status = "error"
 
-    return {"queue_file": str(queue_file), "webhook_status": webhook_status}
+def append_manifest_job(
+    request_id: int,
+    source: str,
+    source_url: str,
+    relative_path: str,
+    manifest_file: Path,
+    youtube_query: str | None = None,
+) -> dict:
+    payload = _job_payload(request_id, source, source_url, relative_path, youtube_query)
+    manifest_file.parent.mkdir(parents=True, exist_ok=True)
+    with manifest_file.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(payload) + "\n")
+    return {"manifest_file": str(manifest_file)}

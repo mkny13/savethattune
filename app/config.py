@@ -24,8 +24,7 @@ class Settings:
     phishnet_cache_path: Path
     synology_mode: str
     synology_queue_dir: Path
-    synology_webhook_url: str | None
-    synology_webhook_token: str | None
+    synology_manifest_file: Path
 
 
 def load_settings() -> Settings:
@@ -45,8 +44,7 @@ def load_settings() -> Settings:
         phish_in_api_key=os.getenv("SAVE_THAT_TUNE_PHISHIN_API_KEY"),
         deaddisc_cache_path=Path(os.getenv("SAVE_THAT_TUNE_DEADDISC_CACHE", "data/deaddisc_cache.json")),
         phishnet_cache_path=Path(os.getenv("SAVE_THAT_TUNE_PHISHNET_CACHE", "data/phishnet_cache.json")),
-        synology_mode=os.getenv("SAVE_THAT_TUNE_SYNOLOGY_MODE", "local").lower(),
+        synology_mode=os.getenv("SAVE_THAT_TUNE_SYNOLOGY_MODE", "manifest").lower(),
         synology_queue_dir=Path(os.getenv("SAVE_THAT_TUNE_SYNOLOGY_QUEUE_DIR", "data/synology_jobs")),
-        synology_webhook_url=os.getenv("SAVE_THAT_TUNE_SYNOLOGY_WEBHOOK_URL"),
-        synology_webhook_token=os.getenv("SAVE_THAT_TUNE_SYNOLOGY_WEBHOOK_TOKEN"),
+        synology_manifest_file=Path(os.getenv("SAVE_THAT_TUNE_SYNOLOGY_MANIFEST_FILE", "data/synology_manifest.ndjson")),
     )

@@ -7,8 +7,7 @@ from app.config import Settings
 from app.db import Database
 from app.services.crossref import load_crossref_for_artist
 from app.services.notifier import send_email
-from app.services.saver import download_from_youtube, download_to_nas, queue_remote_synology_job
-from app.services.saver import download_from_youtube, download_to_nas
+from app.services.saver import append_manifest_job, download_from_youtube, download_to_nas, queue_remote_synology_job
 from app.services.sources import LMAClient, PhishInClient, SpotifyClient
 
 
@@ -52,18 +51,30 @@ def _safe_rel_path(artist: str, title: str, show_date: str | None, ext: str) -> 
     return f"{safe_artist}/{date_prefix}{safe_title}{ext}"
 
 
-def _handle_remote_dispatch(settings: Settings, request_id: int, source: str, source_url: str, rel: str) -> str:
-    dispatch = queue_remote_synology_job(
-        request_id=request_id,
-        source=source,
-        source_url=source_url,
-        relative_path=rel,
-        queue_dir=settings.synology_queue_dir,
-        webhook_url=settings.synology_webhook_url if settings.synology_mode == "webhook" else None,
-        webhook_token=settings.synology_webhook_token,
-    )
-    webhook_text = f", webhook={dispatch['webhook_status']}" if dispatch.get("webhook_status") is not None else ""
-    return f"Queued remote Synology job ({dispatch['queue_file']}{webhook_text})."
+def _handle_remote_dispatch(settings: Settings, request_id: int, source: str, source_url: str, rel: str, youtube_query: str | None = None) -> str:
+    if settings.synology_mode == "queue":
+        dispatch = queue_remote_synology_job(
+            request_id=request_id,
+            source=source,
+            source_url=source_url,
+            relative_path=rel,
+            queue_dir=settings.synology_queue_dir,
+            youtube_query=youtube_query,
+        )
+        return f"Queued Synology job file ({dispatch['queue_file']})."
+
+    if settings.synology_mode == "manifest":
+        dispatch = append_manifest_job(
+            request_id=request_id,
+            source=source,
+            source_url=source_url,
+            relative_path=rel,
+            manifest_file=settings.synology_manifest_file,
+            youtube_query=youtube_query,
+        )
+        return f"Appended Synology manifest job ({dispatch['manifest_file']})."
+
+    raise ValueError(f"Unsupported remote mode: {settings.synology_mode}")
 
 
 def process_capture(db: Database, settings: Settings, request_id: int, artist: str, title: str, show_date: str | None) -> None:
@@ -102,9 +113,9 @@ def process_capture(db: Database, settings: Settings, request_id: int, artist: s
         rel = _safe_rel_path(artist, title, show_date, ".mp3")
         yt_query = f"{artist} {title} {show_date or ''} live"
 
-        if settings.synology_mode in {"queue", "webhook"}:
+        if settings.synology_mode in {"queue", "manifest"}:
             yt_search_url = f"https://www.youtube.com/results?search_query={yt_query.replace(' ', '+')}"
-            save_message = _handle_remote_dispatch(settings, request_id, "youtube", yt_search_url, rel)
+            save_message = _handle_remote_dispatch(settings, request_id, "youtube", yt_search_url, rel, youtube_query=yt_query)
             db.log_action(request_id, "save", "queued_remote", {"source": "youtube", "message": save_message})
             db.set_status(request_id, "done")
             send_email(settings.smtp_host, settings.smtp_port, settings.smtp_username, settings.smtp_password, settings.mail_from, settings.mail_to, f"SaveThatTune request #{request_id}: youtube queued", f"Request: {artist} - {title} ({show_date or 'no date'})\nResult: {save_message}")
@@ -135,14 +146,12 @@ def process_capture(db: Database, settings: Settings, request_id: int, artist: s
         if dl:
             ext = ".flac" if dl.lower().endswith(".flac") else ".mp3"
             rel = _safe_rel_path(artist, title, show_date, ext)
-            if settings.synology_mode in {"queue", "webhook"}:
+            if settings.synology_mode in {"queue", "manifest"}:
                 save_message = _handle_remote_dispatch(settings, request_id, best.source, dl, rel)
                 db.log_action(request_id, "save", "queued_remote", {"source": best.source, "message": save_message, "url": dl})
             else:
                 final_path = download_to_nas(dl, settings.nas_music_root, rel)
                 save_message = f"Downloaded {best.source} file to {final_path}."
-            final_path = download_to_nas(dl, settings.nas_music_root, rel)
-            save_message = f"Downloaded {best.source} file to {final_path}."
         else:
             save_message = f"Matched {best.source} but no downloadable URL was found."
 
