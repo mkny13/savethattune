@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SaveThatTune</title>
+  <style>body{font-family:sans-serif;max-width:520px;margin:2rem auto;padding:1rem}input,button{width:100%;padding:.8rem;margin:.4rem 0}</style>
+</head>
+<body>
+  <h2>Save That Tune</h2>
+  <p>Use this from your Android browser. Submit with your API key in header via shortcut/tool (or use curl/Tasker).</p>
+  <form id="f">
+    <input id="artist" placeholder="Artist" required>
+    <input id="title" placeholder="Title" required>
+    <input id="show_date" placeholder="Show date (optional, YYYY-MM-DD)">
+    <button type="submit">Capture</button>
+  </form>
+  <pre id="out"></pre>
+<script>
+const f=document.getElementById('f');
+f.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const apiKey = prompt('Enter API key');
+  const payload = {
+    artist: document.getElementById('artist').value,
+    title: document.getElementById('title').value,
+    show_date: document.getElementById('show_date').value || null
+  };
+  const res=await fetch('/capture',{method:'POST',headers:{'Content-Type':'application/json','X-Api-Key':apiKey},body:JSON.stringify(payload)});
+  document.getElementById('out').textContent = await res.text();
+});
+</script>
+</body>
+</html>
