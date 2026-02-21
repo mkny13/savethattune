@@ -1,0 +1,10 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+requests==2.32.3
+rapidfuzz==3.9.7
+python-dateutil==2.9.0.post0
+mutagen==1.47.0
+jinja2==3.1.4
+pytest==8.3.3
+beautifulsoup4==4.12.3
+yt-dlp==2024.8.6
